@@ -6,6 +6,8 @@ This fork adds one shared scheduler for **every Reddit API request**, including 
 
 Comments, self-post edits, submission deletion, edit-before-delete, subreddit/score/date filters, saved/gilded/moderator exclusions, export, and all original discovery sorts/timeframes remain available. No password is requested and no telemetry is added. The browser uses your existing Reddit session. Account data and settings stay in your browser unless you export or share them.
 
+When neither comment editing nor comment deletion is selected, processing starts with submissions and skips comment history. If export is selected, comments are still discovered after submissions so the export retains both types of content.
+
 ## Inherited compatibility and bookmarklet fixes
 
 Vaspyyy's modhash compatibility changes are retained: `window.r.config.modhash` first, then the `#config` JSON/legacy-text fallbacks; authenticated requests include both `X-Modhash` and `uh`; missing authentication blocks mutations. HTTP/API error details remain visible. The missing-modhash check now also runs before the random-edit-text confirmation, which previously could return early.
