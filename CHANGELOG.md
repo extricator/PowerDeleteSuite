@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.1 — 2026-10-10
+
+- Start with submission history when neither comment editing nor comment deletion is selected. Skip comment history entirely unless exporting; exports still discover comments after submissions. Preserve author search coverage, pagination and the global request scheduler.
+- Add mocked coverage for all 15 nonempty action/export selections and submission-only deletion of self-posts, link posts and search results. Verify that submission-only mode never edits or deletes comments.
+
 ## 2.0.0 — 2026-10-10
 
 Changes relative to Vaspyyy's `42e3a728cf58106fa5d628e86c9a5ebc786348c3` (`master`), preserving its full history and GitHub fork lineage:

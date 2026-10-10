@@ -49,6 +49,49 @@ function mutationReply(url, init) {
   return response(url === "/api/editusertext.json" ? edited(params.get("thing_id"), params.get("text")) : {});
 }
 
+test("discovery starts with submissions without comment actions and retains comments for exports", async () => {
+  for (let selection = 1; selection < 16; selection++) {
+    const opts = { posts: !!(selection & 1), comments: !!(selection & 2), edit: !!(selection & 4), export: !!(selection & 8) };
+    const a = app(() => response(listing()), opts);
+    a.pd.actions.page.next(); await a.clock.advance(1000000);
+    const context = JSON.stringify(opts);
+    assert.equal(a.completed(), true, context);
+    assert.ok(a.calls[0].url.includes(opts.comments || opts.edit ? "/comments/" : "/submitted/"), context);
+    assert.equal(a.calls.some(c => c.url.includes("/comments/")), opts.comments || opts.edit || opts.export, context);
+    assert.ok(a.calls.some(c => c.url.includes("/submitted/")), context);
+    assert.equal(a.calls.filter(c => c.url.startsWith("/search.json")).length, 14, context);
+    a.dom.window.close();
+  }
+});
+
+test("submission-only deletion starts immediately, paginates and searches without editing or deleting comments", async () => {
+  const a = app((url, init) => {
+    if (url.startsWith("/api/")) return mutationReply(url, init);
+    const parsed = new URL(url, "https://old.reddit.com");
+    if (url.includes("/comments/")) throw new Error("Submission-only runs must not scan comments");
+    if (parsed.searchParams.get("sort") !== "new") return response(listing());
+    if (url.includes("/submitted/")) {
+      if (!parsed.searchParams.get("after")) return response(listing([item("t3", "self")], "t3_self"));
+      const link = item("t3", "link"); link.data.is_self = false;
+      return response(listing([link]));
+    }
+    // Only submission deletion is authorized, even if a listing includes a comment.
+    return response(listing([item("t1", "comment"), item("t3", "search")]));
+  }, { posts: true });
+  a.pd.actions.page.next(); await a.clock.advance(1000000);
+  assert.equal(a.completed(), true);
+  assert.match(a.calls[0].url, /\/submitted\//);
+  const mutations = a.calls.filter(c => c.url.startsWith("/api/"));
+  assert.deepEqual(mutations.map(c => c.url), ["/api/del", "/api/del", "/api/del"]);
+  assert.deepEqual(mutations.map(c => new URLSearchParams(c.init.body).get("id")), ["t3_self", "t3_link", "t3_search"]);
+  const pages = a.calls.filter(c => c.url.includes("/submitted/") && new URL(c.url, "https://old.reddit.com").searchParams.get("sort") === "new");
+  assert.equal(new URL(pages[1].url, "https://old.reddit.com").searchParams.get("after"), "t3_self");
+  assert.equal(a.pd.task.info.edited, 0);
+  assert.equal(a.pd.task.info.deleted, 3);
+  for (let i = 1; i < a.calls.length; i++) assert.ok(a.calls[i].at - a.calls[i - 1].at >= 15000);
+  assert.equal(a.max(), 1); a.dom.window.close();
+});
+
 for (const kind of ["t1", "t3"]) {
   test(`${kind} pagination is paced and searches visit every original sort/timeframe`, async () => {
     const target = kind === "t1" ? "/comments/" : "/submitted/";
@@ -236,7 +279,7 @@ test("generated bookmarklet payload initializes the inherited interface and pace
   win.$("#pd__form").trigger("submit");
   await h.clock.advance(14999); assert.equal(calls.length, 2);
   await h.clock.advance(1); assert.equal(calls.length, 3);
-  assert.match(calls[2].url, /comments/);
+  assert.match(calls[2].url, /submitted/);
   await h.clock.advance(1000000);
   assert.match(win.$("#pd__rate-status").text(), /Completed/);
   assert.equal(win.pd_processing, false); win.close();

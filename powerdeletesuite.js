@@ -284,7 +284,7 @@ function createRedditScheduler(options, dependencies) {
 if (typeof module !== "undefined" && module.exports) module.exports = createRedditScheduler;
 
 var pd = {
-  version: "2.0.0",
+  version: "2.0.1",
   bookmarkver: "2.0",
   editStrings: [
     "I love ice cream.",
@@ -759,6 +759,13 @@ var pd = {
           timeframes: ["all", "hour", "day", "week", "month", "year"],
         },
       };
+      // Skip comment discovery when no comment action needs it. Exports still
+      // include comments, but start with submissions in this mode as well.
+      if (!pd.task.config.isRemovingComments && !pd.task.config.isEditing) {
+        pd.task.paths.sections = pd.task.config.isExporting
+          ? ["submissions", "comments", "search"]
+          : ["submissions", "search"];
+      }
       pd.filters = {
         subs: {
           enabled: $("#pd__subreddits").is(":checked"),
