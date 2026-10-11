@@ -103,18 +103,11 @@ Network/5xx failures on reads get bounded retries through the same queue. HTTP 4
 
 ## Continue an HTTP 403 failure without refreshing
 
-An HTTP 403 is an unexpected rejection, not a normal processing step. The reported live-run failure did not include enough detail to establish its cause; the recovery fix addresses the script's inability to continue, and does not claim to prevent Reddit from rejecting a request. Version 2.0.2 identifies the failed operation/item and shows recovery controls. Inspect that evidence before deciding what to do; the status alone does not establish that your login is invalid. **Retry rejected operation and continue** requires confirmation and attempts it once; another 403 stops again. **Skip this item and continue (record failure)** requires confirmation, leaves its operation unresolved, and prevents later discovery sorts from retrying that item within the run. Skipping a failed edit never proceeds to delete that item. Failed history/interface reads allow explicit retry only, because skipping them would lose discovery coverage. Repeated failures require investigation rather than repeated retries or skips.
+An HTTP 403 stops processing and shows built-in controls identifying the rejected operation/item. **Retry rejected operation and continue** requires confirmation and attempts it once; another 403 stops again. **Skip this item and continue (record failure)** requires confirmation, leaves its operation unresolved, and prevents later discovery sorts from retrying that item within the run. Skipping a failed edit never proceeds to delete that item. Failed history/interface reads allow explicit retry only, because skipping them would lose discovery coverage. Inspect the failed request before deciding what to do; repeated failures require investigation.
 
 Completed-operation records, pending items, pagination, filters, counts and partial export remain in memory. Recovery uses the same pacing/settings, waits conservatively before its first request, respects saved cooldowns, checks the account/modhash and supports Stop during the wait. It never automatically retries, changes the selected action modes, or offers to retry ambiguous mutation outcomes. A local downloadable recovery log records explicit retries/skips; skipped items are never counted as successful operations. Their export action fields describe only operations actually confirmed; use the recovery log to identify unresolved skips.
 
-For an **already failed, still-open 2.0.0/2.0.1 tab**, add the controls without refreshing:
-
-1. Open the [minified recovery bookmarklet](https://raw.githubusercontent.com/extricator/PowerDeleteSuite/master/recovery-bookmarklet.min.js) in a separate tab. Copy its entire single line from the browser.
-2. Create a temporary bookmark named **PDS Recovery**, pasting that line into its URL field.
-3. Return to the existing failed PowerDeleteSuite tab and click **PDS Recovery**. This downloads this fork's recovery helper and adds controls; it sends no Reddit requests by itself.
-4. Inspect the failed item, then explicitly choose Retry or Skip. Keep the tab open; download the partial export and recovery log as needed.
-
-Readable sources: [recovery-bookmarklet.js](recovery-bookmarklet.js), [src/recovery.js](src/recovery.js). Downloaded code is checked for HTTP errors and empty bodies; failed downloads are not executed. This is an additional temporary bookmark, not a replacement for the regular launcher. **Refreshing/closing the failed tab loses its pending run.** Export and recovery logs are not importable checkpoints; exact recovery after a reload is not implemented. Missing-modhash and ambiguous/non-403 failures still require inspection rather than this recovery path.
+Recovery is part of the regular script; no additional bookmarklet or download is needed. **Refreshing/closing a tab loses its pending run.** Export and recovery logs are not importable checkpoints; exact recovery after a reload is not implemented. Missing-modhash and ambiguous/non-403 failures require inspection rather than this recovery path.
 
 ## Troubleshooting and limitations
 

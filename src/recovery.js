@@ -1,9 +1,9 @@
-/* Explicit recovery for rejected mutations; also loadable into stopped 2.0.x tabs. */
+/* Built-in, explicit recovery for rejected Reddit operations. */
 function installRedditRecovery(win) {
   "use strict";
   var pd = win.pd, $ = win.jQuery || win.$;
   if (!pd || !$ || !pd.api || !pd.setup || !pd.setup.basicSettings) {
-    throw new Error("Open the existing PowerDeleteSuite tab before loading recovery controls");
+    throw new Error("Recovery requires an initialized PowerDeleteSuite application");
   }
   if (pd.recovery) { pd.recovery.render(); return pd.recovery; }
   var audit = [], previousCounts = { requests: 0, edited: 0, deleted: 0, failed: 0, rateLimits: 0 };
@@ -14,12 +14,12 @@ function installRedditRecovery(win) {
   function context() {
     var state = pd.api.snapshot(), task = pd.task;
     if (!state.terminal || state.cancelled || state.inFlight || win.pd_processing ||
-        !/^HTTP 403\b/.test(state.lastError)) return null;
-    if (!task) return state.lastFailure && state.lastFailure.operation === "interface"
+        !state.lastFailure || state.lastFailure.status !== 403) return null;
+    if (!task) return state.lastFailure.operation === "interface"
       ? { state: state, operation: "interface", path: state.lastFailure.path } : null;
     if (!task.items || !task.items.length) {
-      if (state.lastFailure && state.lastFailure.operation !== "listing") return null;
-      return { state: state, operation: "listing", path: pd.endpoints[task.paths.sections[0]] };
+      if (state.lastFailure.operation !== "listing" || state.lastFailure.path !== pd.endpoints[task.paths.sections[0]]) return null;
+      return { state: state, operation: "listing", path: state.lastFailure.path };
     }
     var item = task.items[0], config = task.config;
     var confirmed = pd.confirmed[item.data.name] || {};
@@ -27,8 +27,8 @@ function installRedditRecovery(win) {
       ? "edit" : !confirmed.deleted && ((item.kind === "t1" && config.isRemovingComments) ||
         (item.kind === "t3" && config.isRemovingPosts)) ? "delete" : null;
     if (!operation) return null;
-    if (state.lastFailure && (state.lastFailure.operation !== operation || state.lastFailure.name !== item.data.name)) return null;
-    return { state: state, item: item, operation: operation, path: operation === "edit" ? "/api/editusertext.json" : "/api/del" };
+    if (state.lastFailure.operation !== operation || state.lastFailure.name !== item.data.name) return null;
+    return { state: state, item: item, operation: operation, path: state.lastFailure.path };
   }
   function panel() {
     if (!$("#pd__recovery").length) {
@@ -56,7 +56,7 @@ function installRedditRecovery(win) {
       if (!audit.length && !failure) target.remove();
       return;
     }
-    target.prepend($("<strong>").text("HTTP 403 recovery — v2.0.2"));
+    target.prepend($("<strong>").text("HTTP 403 recovery — v" + pd.version));
     target.append($("<p>").text("Reddit rejected " + current.operation + " for " + (current.item ? current.item.data.name : current.path) +
       " with HTTP 403. Completed work and remaining history are still in this tab. Check your login and inspect the item before choosing an action. A 403 can affect one item or broader access; repeated failures require investigation."));
     var permalink = current.item && current.item.data.permalink;
@@ -82,8 +82,8 @@ function installRedditRecovery(win) {
     if (!win.confirm(skip ? "Skip " + current.item.data.name + "? Its failed operation will remain unresolved and be recorded in the recovery log. Continue with the remaining items?"
       : "Retry the rejected " + current.operation + " for " + (current.item ? current.item.data.name : current.path) + " once, then continue? A repeated 403 will stop again. Completed operations will not be replayed.")) return false;
 
-    // Older shipped schedulers cannot clear a terminal failure. Recreate only
-    // the transport, retaining task/cursors, filters, confirmed IDs and export.
+    // Recreate the terminal transport while retaining task/cursors, filters,
+    // confirmed IDs and export. Recovery always requires explicit confirmation.
     var oldApi = pd.api, oldConfig = pd.config;
     try {
       pd.api = null;

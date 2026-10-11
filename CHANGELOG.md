@@ -1,12 +1,16 @@
 # Changelog
 
+## 2.0.3 — 2026-10-11
+
+- Remove the temporary recovery bookmarklet, standalone helper download, old-version compatibility adapter, build outputs and installation instructions. Retain built-in HTTP 403 Retry/Skip controls in the regular script; recovery requires explicit scheduler failure metadata.
+
 ## 2.0.2 — 2026-10-11
 
 - Add explicit recovery after HTTP 403: retry the rejected operation once, or explicitly skip a rejected item and record the unresolved failure. A repeated rejection stops again. Failed history/interface reads may be retried but never skipped.
 - Preserve pending items, pagination, filters, confirmed edit/delete records, counts and partial export while replacing the stopped transport. Keep global pacing, observed cooldowns, account/modhash checks and Stop enforcement. Do not offer recovery for ambiguous writes.
 - Prevent explicitly skipped items from being acted on again across discovery sorts; a failed edit that is skipped cannot trigger deletion. Provide an inspection link and downloadable local recovery log.
-- Bundle recovery controls for new runs and publish a separate recovery bookmarklet/helper that can install into an unrefreshed failed 2.0.0/2.0.1 tab. Loading controls does not start Reddit requests. Recovery is in-memory only; refreshing still loses the pending run.
-- Include failed request operation/path/item metadata in scheduler snapshots. Add mocked tests for legacy recovery, retries, skips, mutation ordering, counters/export, pagination, cooldowns, cancellation, authentication and recovery downloads.
+- Bundle recovery controls for new runs. Recovery is in-memory only; refreshing still loses the pending run.
+- Include failed request operation/path/item metadata in scheduler snapshots. Add mocked tests for retries, skips, mutation ordering, counters/export, pagination, cooldowns, cancellation and authentication.
 
 ## 2.0.1 — 2026-10-10
 

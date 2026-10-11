@@ -9,35 +9,14 @@ const root = path.join(__dirname, "..");
 function run(code, opts = {}) {
   const requests = [], scripts = [], alerts = [];
   const context = {
-    window: { pd_active: opts.active, pd: opts.recovery ? { api: {} } : undefined }, Date: { now: () => 123456789 },
+    window: { pd_active: opts.active }, Date: { now: () => 123456789 },
     document: { location: { hostname: opts.hostname || "old.reddit.com", pathname: opts.pathname || "/user/test/overview" },
       createElement: () => ({}), head: { appendChild: script => scripts.push(script) } },
     fetch: async url => { requests.push(url); if (opts.offline) throw new Error("offline"); return response(opts.code === undefined ? "window.fixture = true;" : opts.code, opts.status || 200); },
     alert: message => alerts.push(message), confirm: () => opts.confirm !== false,
   };
-  context.location = context.document.location;
-  context.document.body = context.document.head;
   vm.runInNewContext(code, context);
   return { requests, scripts, alerts, context };
-}
-for (const file of ["recovery-bookmarklet.js", "recovery-bookmarklet.min.js"]) {
-  const code = fs.readFileSync(path.join(root, file), "utf8");
-  test(`${file} installs only from the fork into an existing old Reddit run without redirects`, async () => {
-    const h = run(code, { recovery: true }); await flush();
-    assert.deepEqual(h.requests, ["https://raw.githubusercontent.com/extricator/PowerDeleteSuite/master/recovery.js?t=123456789"]);
-    assert.equal(h.scripts.length, 1);
-    for (const opts of [{}, { recovery: true, hostname: "reddit.com" }, { recovery: true, hostname: "old.reddit.com.evil.test" }]) {
-      const rejected = run(code, opts); await flush();
-      assert.equal(rejected.requests.length, 0); assert.equal(rejected.alerts.length, 1);
-      assert.equal(typeof rejected.context.document.location, "object");
-    }
-  });
-  test(`${file} checks download status and handles failed recovery downloads without injecting code`, async () => {
-    for (const opts of [{ status: 404 }, { status: 500 }, { code: "" }, { offline: true }]) {
-      const h = run(code, { ...opts, recovery: true }); await flush();
-      assert.equal(h.scripts.length, 0); assert.match(h.alerts[0], /Recovery download failed/);
-    }
-  });
 }
 for (const file of ["bookmarklet.js", "bookmarklet.min.js"]) {
   const code = fs.readFileSync(path.join(root, file), "utf8");
@@ -72,7 +51,7 @@ for (const file of ["bookmarklet.js", "bookmarklet.min.js"]) {
 }
 
 test("all script loaders and README reference extricator, with no runtime text patches", () => {
-  for (const file of ["bookmarklet.js", "bookmarklet.min.js", "recovery-bookmarklet.js", "recovery-bookmarklet.min.js", "powerdeletesuite.user.js"]) {
+  for (const file of ["bookmarklet.js", "bookmarklet.min.js", "powerdeletesuite.user.js"]) {
     const text = fs.readFileSync(path.join(root, file), "utf8");
     assert.match(text, /raw\.githubusercontent\.com\/extricator\/PowerDeleteSuite\/master\//);
     assert.doesNotMatch(text, /raw\.githubusercontent\.com\/(?:j0be|Vaspyyy|mykola2312)/);
