@@ -1,12 +1,12 @@
 {
   "name": "powerdeletesuite-maintained",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "private": true,
   "description": "Maintained Vaspyyy fork with serialized Reddit API requests",
   "scripts": {
     "build": "node scripts/build.js && node scripts/bookmarklet.js",
     "test": "node scripts/test.js",
-    "lint": "eslint src scripts test bookmarklet.js powerdeletesuite.user.js",
+    "lint": "eslint src scripts test bookmarklet.js recovery-bookmarklet.js powerdeletesuite.user.js",
     "check": "node scripts/build.js --check && node scripts/bookmarklet.js --check && node scripts/syntax.js",
     "verify": "npm run check && npm run lint && npm test"
   },
