@@ -17,6 +17,7 @@ function createRedditScheduler(options, dependencies) {
   var terminal = false, estimated = false, lastError = "", status = "Idle";
   var counts = { requests: 0, edited: 0, deleted: 0, failed: 0, rateLimits: 0 };
   var rateHeaders = {};
+  var lastFailure = null;
 
   function error(kind, message, extra) {
     return Object.assign(new Error(message), { kind: kind }, extra);
@@ -39,6 +40,7 @@ function createRedditScheduler(options, dependencies) {
       cooldownMs: Math.max(0, blockedUntil - now()), estimated: estimated,
       queued: queue.length, inFlight: active !== null, lastError: lastError,
       counts: Object.assign({}, counts), rateHeaders: Object.assign({}, rateHeaders),
+      lastFailure: lastFailure && Object.assign({}, lastFailure),
       settings: Object.assign({}, settings),
     };
   }
@@ -197,6 +199,8 @@ function createRedditScheduler(options, dependencies) {
           lastError = failure.message;
         }
         terminal = !cancelled;
+        lastFailure = { path: job.url, operation: job.spec.kind, name: job.spec.name || null,
+          status: failure.status || null, kind: failure.kind, message: failure.message };
         job.reject(failure);
         queue.splice(0).forEach(function (pending) { pending.reject(failure); });
         emit(cancelled ? "Cancelled" : "Failed");

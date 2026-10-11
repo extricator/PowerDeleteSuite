@@ -1,5 +1,5 @@
 var pd = {
-  version: "2.0.1",
+  version: "2.0.2",
   bookmarkver: "2.0",
   editStrings: [
     "I love ice cream.",
@@ -980,7 +980,7 @@ var pd = {
       if (error.kind === "cancelled") return;
       if (pd.task) pd.task.info.errors++;
       $("#pd__last-error").text(error.message);
-      $("#pd__rate-status").text("Failed — processing stopped. Inspect the last error, then reload before a new run.");
+      $("#pd__rate-status").text("Failed — processing stopped. Inspect the error and recovery controls below. Download any partial export before reloading.");
       $("#pd__form :input").prop("disabled", true);
       pd.ui.partialExport();
     },

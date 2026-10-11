@@ -7,6 +7,10 @@ const root = path.join(__dirname, "..");
   const readable = fs.readFileSync(path.join(root, "bookmarklet.js"), "utf8");
   const result = await minify(readable.replace(/^javascript:/, ""), { ecma: 2015 });
   const output = "javascript:" + result.code + "\n";
+  const recoveryReadable = fs.readFileSync(path.join(root, "recovery-bookmarklet.js"), "utf8");
+  const recoveryResult = await minify(recoveryReadable.replace(/^javascript:/, ""), { ecma: 2015 });
+  const recoveryOutput = "javascript:" + recoveryResult.code + "\n";
+  const recoveryTarget = path.join(root, "recovery-bookmarklet.min.js");
   const target = path.join(root, "bookmarklet.min.js");
   const readme = path.join(root, "README.md");
   const start = "<!-- bookmarklet:start -->", end = "<!-- bookmarklet:end -->";
@@ -14,9 +18,11 @@ const root = path.join(__dirname, "..");
     "\n```\n\nCopy this entire single line into a bookmark's URL field:\n\n```javascript\n" + output.trim() + "\n```\n\n" + end;
   if (process.argv.includes("--check")) {
     if (fs.readFileSync(target, "utf8") !== output) throw new Error("Stale minified bookmarklet; run npm run build");
+    if (fs.readFileSync(recoveryTarget, "utf8") !== recoveryOutput) throw new Error("Stale recovery bookmarklet; run npm run build");
     if (!fs.readFileSync(readme, "utf8").includes(body)) throw new Error("Stale README bookmarklets; run npm run build");
   } else {
     fs.writeFileSync(target, output);
+    fs.writeFileSync(recoveryTarget, recoveryOutput);
     if (fs.existsSync(readme)) {
       const text = fs.readFileSync(readme, "utf8");
       if (text.includes(start) && text.includes(end)) {
